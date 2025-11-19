@@ -9,7 +9,7 @@ import time
 from PIL import Image
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from models.cnn_test import CIFAR10CNN
+from models.tb_cnn import CIFAR10CNN
 
 
 
