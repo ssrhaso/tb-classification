@@ -32,10 +32,9 @@ class TBDataset(Dataset):
         label = self.labels_df.iloc[idx, 1]
         
         # Construct path based on label (pos or neg folder)
-        if label == 1:
-            img_path = os.path.join(self.root_dir, 'pos', img_name)
-        else:
-            img_path = os.path.join(self.root_dir, 'neg', img_name)
+        folder = 'pos' if label == 1 else 'neg'
+        img_path = os.path.join(self.root_dir, folder, img_name)
+            
         
         # Load image
         image = Image.open(img_path).convert('RGB')

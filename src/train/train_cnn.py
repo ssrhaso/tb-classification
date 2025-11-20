@@ -11,7 +11,7 @@ import os
 
 # Import your CNN model
 import sys
-sys.path.append('.')
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from datasets.tb_dataset import TBDataset, create_data_splits
 
 
@@ -34,7 +34,7 @@ print("-"*60)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-
+DATA_DIR = './data/tb_dataset_crops'
 
 # 1. Prepare TB dataset
 print("\n1. Preparing TB dataset...")
@@ -68,11 +68,11 @@ val_transform = transforms.Compose([
 
 # CREATE SPLITS IF NOT EXIST
 if not os.path.exists('splits/train_split.csv'):
-    create_data_splits(data_dir='./data/tb_dataset_crops', seed=42)
+    create_data_splits(data_dir= DATA_DIR, seed=42)
     
 # DATASETS
-trainset = TBDataset(csv_file='splits/train_split.csv', root_dir='./data/tb_dataset_crops', transform=train_transform)
-valset = TBDataset(csv_file='splits/val_split.csv', root_dir='./data/tb_dataset_crops', transform=val_transform)
+trainset = TBDataset(csv_file = 'splits/train_split.csv', root_dir = DATA_DIR, transform = train_transform)
+valset = TBDataset(csv_file = 'splits/val_split.csv', root_dir = DATA_DIR, transform = val_transform)
 print(f"TRAIN : {len(trainset)}, VAL : {len(valset)}")
 
 # DATALOADERS
@@ -88,16 +88,16 @@ print("\n2. SETTING UP TRAINING...")
 
 if config['model'] == 'resnet18':
     if config['pretrained']:
-        model = models.resnet18(pretrained = True, weights = models.ResNet18_Weights.IMAGENET1K_V1)
+        model = models.resnet18(weights = models.ResNet18_Weights.IMAGENET1K_V1)
     else:
-        model = models.resnet18(pretrained = False, weights = None)
+        model = models.resnet18(weights = None)
     model.fc = nn.Linear(in_features = 512, out_features = 2)   
 
 elif config['model'] == 'resnet50':
     if config['pretrained']:
-        model = models.resnet50(pretrained = True, weights = models.ResNet50_Weights.IMAGENET1K_V1)
+        model = models.resnet50(weights = models.ResNet50_Weights.IMAGENET1K_V1)
     else:
-        model = models.resnet50(pretrained = False, weights = None)
+        model = models.resnet50(weights = None)
     model.fc = nn.Linear(in_features = 2048, out_features = 2)
 model = model.to(device)
 print(f" MODEL LOADED : {config['model']} | PRETRAINED : {config['pretrained']}")
