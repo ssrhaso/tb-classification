@@ -15,15 +15,13 @@ from torchvision import models, transforms
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 DATA_DIR = os.path.join(PROJECT_ROOT, 'src', 'datasets', 'tb_dataset_crops')
 
-
 # Add project root to path so `src` package imports work
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_dir = os.path.dirname(current_dir)
 project_root = os.path.dirname(src_dir)
 sys.path.insert(0, project_root)
 
-
-# Now use absolute import from project root
+# Absolute import from project root
 from src.datasets.tb_dataset import TBDataset, create_data_splits
 
 
