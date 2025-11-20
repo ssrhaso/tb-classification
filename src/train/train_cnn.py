@@ -9,6 +9,11 @@ import argparse
 import time
 import os
 
+# root (tb-classification), assuming train_cnn.py is in src/train/
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+DATA_DIR = os.path.join(PROJECT_ROOT, "src", "datasets", "tb_dataset_crops")
+
+
 # Import your CNN model
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -34,7 +39,6 @@ print("-"*60)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-DATA_DIR = './data/tb_dataset_crops'
 
 # 1. Prepare TB dataset
 print("\n1. Preparing TB dataset...")
