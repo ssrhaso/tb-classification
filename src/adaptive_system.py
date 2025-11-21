@@ -1,15 +1,36 @@
+""" ADAPTIVE CNN-ViT MODULE, CONFIGURABLE, ROUTING DECISIONS TO BALANCE LATENCY & ACCURACY """
+
 import os
 import sys
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 from torchvision import datasets
-from transformers import ViTForImageClassification, ViTImageProcessor
+from torchvision import models 
 import time
 from PIL import Image
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from models.tb_cnn import CIFAR10CNN
+from datasets.tb_dataset import TBDataset
+
+# CONFIGURATION
+CONFIG = {
+    'cnn_checkpoint': './results/checkpoints/cnn_best.pt',
+    'vit_checkpoint': './results/checkpoints/vit_best',
+    'cnn_architecture': 'resnet18', # options: 'resnet18', 'resnet50'
+    'vit_architecture': 'vit_b_16', 
+    'threshold': 0.90,  # CONFIDENCE THRESHOLD FOR ROUTING
+    'resolution': 224,  # IMAGE SIZE
+    'test_csv': 'splits/test_split.csv',
+    'data_dir': './src/datasets/tb_dataset_crops',
+    'num_samples': None,
+    'device': 'cuda' if torch.cuda.is_available() else 'cpu',
+    'num_classes': 2,
+}
+
+
+
 
 
 
@@ -18,81 +39,84 @@ class AdaptiveClassifier:
         self,
         cnn_checkpoint_path: str,
         vit_checkpoint_path: str,
+        cnn_architecture: str = 'resnet18',
+        vit_architecture: str = 'vit_b_16',
+        num_classes: int = 2,
+        
         threshold: float = 0.90,
+        resolution: int = 224,
         device: str = 'cpu',
-        input_mean = None,
-        input_std = None
+        input_mean: tuple = None,
+        input_std: tuple = None,
+        transform = None,
     ):
         
         self.device = device
         self.threshold = threshold
+        self.resolution = resolution
+        self.num_classes = num_classes
+        
         
         # LOAD CNN MODEL
-        self.cnn = CIFAR10CNN(num_classes=10).to(self.device)  
-        input_mean = input_mean if input_mean is not None else (0.4914, 0.4822, 0.4465)
-        input_std = input_std if input_std is not None else (0.2470, 0.2435, 0.2616)        
-                                     
         
-        checkpoint = torch.load(cnn_checkpoint_path, map_location = self.device)    # Load CNN checkpoint (.pt file)
-        # Check if the checkpoint contains 'model_state_dict' key
-        try:
-                
-            if 'model_state_dict' in checkpoint:
-                self.cnn.load_state_dict(checkpoint['model_state_dict'])
-            else:
-                self.cnn.load_state_dict(checkpoint)
-                
-        except FileNotFoundError as e:
-            print(f"CNN model checkpoint not found at {cnn_checkpoint_path} : {e}")
-        except RuntimeError as e:
-            print(f"Error loading CNN model state dict: {e}")
+        # DEFAULT ImageNet NORMALIZATION VALUES IF NONE PROVIDED
+        self.input_mean = input_mean if input_mean is not None else (0.485, 0.456, 0.406)
+        self.input_std = input_std if input_std is not None else (0.229, 0.224, 0.225)        
+        
+        # LOAD CNN
+        print("\nLOADING CNN model...")
+        self.cnn = self._load_cnn(cnn_architecture, cnn_checkpoint_path, num_classes)
+        self.cnn.to(self.device)
         self.cnn.eval()
         print("CNN model loaded")
         
         
         # LOAD VIT MODEL
-        self.vit = ViTForImageClassification.from_pretrained(vit_checkpoint_path).to(self.device)
-        self.vit_processor = ViTImageProcessor.from_pretrained(vit_checkpoint_path)
+        print("\nLOADING ViT model...")
+        self.vit = self._load_vit(vit_architecture, vit_checkpoint_path, num_classes)
+        self.vit.to(self.device)
         self.vit.eval()
         print("ViT model loaded")
         
+
+
     
         # SETUP PREPROCESSING
         # CNN (32x32):
+
+        if transform is not None:
+            self.transform = transform
         
-        self.cnn_transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize( 
-                mean = input_mean,
-                std = input_std)
+        else:
+            self.transform = transforms.Compose([
+                transforms.Resize((self.resolution, self.resolution)),
+                transforms.ToTensor(),
+                transforms.Normalize( 
+                    mean = self.input_mean,
+                    std = self.input_std)
         ])
         
+        print("TRANSFORMS for CNN and ViT set up")
+        print("-"*60)
+        print(" WARMING UP MODELS...")
         self._warmup() # WARMUP TO REDUCE INITIAL LATENCY (CACHING)
-        
+        print("-"*60)
+        print(" MODELS WARMED UP")
         
     
     # WARMUP METHOD (TO REDUCE INITIAL LATENCY)
     def _warmup(
         self,
         num_runs: int = 5,
-        input_sizes : dict = None 
     ):
         """ WARMUP MODELS TO REDUCE INITIAL LATENCY , IMPROVE CONSISTENCY IN INFERENCE LABELLING """
-        if input_sizes is None:
-            input_sizes = {
-                'cnn': (1, 3, 32, 32),
-                'vit': (1, 3, 224, 224)
-            }
-            
-        dummy_cnn = torch.randn(*input_sizes['cnn']).to(self.device)
-        dummy_vit = torch.randn(*input_sizes['vit']).to(self.device)
+        dummy_input = torch.randn(1, 3, self.resolution, self.resolution).to(self.device)
         
         with torch.no_grad(): # NO GRADIENTS NEEDED, FASTER
            for _ in range(num_runs):
-                _ = self.cnn(dummy_cnn)
-                _ = self.vit(pixel_values = dummy_vit).logits
+                _ = self.cnn(dummy_input)
+                _ = self.vit(dummy_input)
         
-        print("Models warmed up")
     
     
     
@@ -103,6 +127,12 @@ class AdaptiveClassifier:
     ) -> tuple:
         """ CNN + VIT ADAPTIVE INFERENCE , RETURNS PREDICTION, ROUTED MODEL, CONFIDENCE, METADATA """
         
+        if isinstance(image, torch.Tensor):
+            tensor_img = image 
+        
+        else:
+            tensor_img = transforms.ToTensor()(image)
+            
         # METADATA FOR ANALYSIS
         stats = {
             'cnn_latency' : 0.0,
@@ -115,7 +145,7 @@ class AdaptiveClassifier:
         
         # CNN INFERENCE (ALWAYS RUNNING)
     
-        cnn_pred, cnn_confidence, cnn_latency = self._predict_cnn(image)
+        cnn_pred, cnn_confidence, cnn_latency = self._predict_cnn(tensor_img)
         stats['cnn_latency'] = cnn_latency
         stats['cnn_confidence'] = cnn_confidence
         stats['cnn_prediction'] = cnn_pred
@@ -139,7 +169,7 @@ class AdaptiveClassifier:
         else:
             # LOW CONFIDENCE - ROUTE TO VIT
         
-            vit_pred, vit_confidence, vit_latency = self._predict_vit(image)
+            vit_pred, vit_confidence, vit_latency = self._predict_vit(tensor_img)
             
             stats['vit_latency'] = vit_latency
             stats['routed_to'] = 'ViT'
@@ -154,25 +184,120 @@ class AdaptiveClassifier:
             )
             
             
-    # PREDICTION HELPERS
+            
+       
+    # HELPER FUNCTIONS:
+         
+    # MODEL LOADING HELPERS
+    # CNN MODEL LOADER     
+    def _load_cnn(
+        self,
+        architecture: str,
+        checkpoint_path: str,
+        num_classes: int
+    ):
+        """ LOAD CNN MODEL FROM CHECKPOINT """
+        # INITIALIZE MODEL
+        if architecture == 'resnet18':
+            model = models.resnet18(weights = None)
+            model.fc = nn.Linear(in_features = 512, out_features = num_classes)
+        
+        elif architecture == 'resnet50':
+            model = models.resnet50(weights = None)
+            model.fc = nn.Linear(in_features = 2048, out_features = num_classes)
+        
+        else:
+            raise ValueError(f"Unsupported CNN architecture: {architecture}")
+        
+        # LOAD CHECKPOINT
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location = self.device)
+            if 'model_state_dict' in checkpoint:
+                model.load_state_dict(checkpoint['model_state_dict'])
+            else:
+                model.load_state_dict(checkpoint)
     
-    # CNN PREDICTION HELPED
+        except FileNotFoundError:
+            raise FileNotFoundError(f"CNN checkpoint not found at: {checkpoint_path}")
+        except RuntimeError as e:
+            raise RuntimeError(f"Error loading CNN checkpoint: {e}")
+        return model
+    
+    # VIT MODEL LOADER
+    def _load_vit(
+        self,
+        architecture: str,
+        checkpoint_path: str,
+        num_classes: int
+    ):
+        """ LOAD VIT MODEL FROM CHECKPOINT """
+        # INITIALIZE MODEL
+        
+        if os.path.isdir(checkpoint_path):
+            # HUGGING FACE FORMAT
+            from transformers import ViTForImageClassification, ViTConfig
+            try:
+                model = ViTForImageClassification.from_pretrained(
+                    checkpoint_path,
+                    num_labels = num_classes,
+                    ignore_mismatched_sizes= True
+                )
+                return model
+            except Exception as e:
+                raise RuntimeError(f"Error loading ViT checkpoint from Hugging Face format: {e}")
+        
+        
+        else:
+            
+            if architecture == 'vit_b_16':
+                model = models.vit_b_16(weights = None)
+            
+            elif architecture == 'vit_b_32':
+                model = models.vit_b_32(weights = None)
+            else:
+                raise ValueError(f"Unsupported ViT architecture: {architecture}")
+            
+            # MODIFY CLASSIFICATION HEAD
+            model.heads = nn.Linear(model.hidden_dim, num_classes)
+            
+            # LOAD CHECKPOINT
+            try:
+                checkpoint = torch.load(checkpoint_path, map_location = self.device)
+                if 'model_state_dict' in checkpoint:
+                    model.load_state_dict(checkpoint['model_state_dict'])
+                else:
+                    model.load_state_dict(checkpoint)
+        
+            except FileNotFoundError:
+                raise FileNotFoundError(f"ViT checkpoint not found at: {checkpoint_path}")
+            except RuntimeError as e:
+                raise RuntimeError(f"Error loading ViT checkpoint: {e}")
+            return model
+        
+    
+            
+            
+    # PREDICTION HELPERS
+    # CNN PREDICTION HELPER
     def _predict_cnn(
         self,
         image: Image.Image
     ):
         """ PREDICTION USING CNN MODEL """
-        tensor_cnn = self.cnn_transform(image)      # PIL to Tensor -> [3, 32, 32]
-        batched = tensor_cnn.unsqueeze(0)           # BATCH DIMENSION [3, 32, 32] -> [1, 3, 32, 32]
+        batched = image.unsqueeze(0)                # BATCH DIMENSION [3, 32, 32] -> [1, 3, 32, 32]
         cnn_input = batched.to(self.device)         # MOVE TO CPU/GPU
         
         # INFERENCE
         start = time.perf_counter()                                             # START TIME (INF 1)
         with torch.no_grad():
-            cnn_confidence , cnn_pred = self.cnn.get_confidence(cnn_input)
+            # GET CONFIDENCE
+            outputs =  self.cnn(cnn_input)  # FORWARD PASS
+            probs = F.softmax(outputs, dim = 1) # SOFTMAX PROBABILITIES
+            cnn_confidence, cnn_pred = torch.max(probs, dim = 1) # MAX CONFIDENCE & PREDICTION
+            
         cnn_latency = (time.perf_counter() - start) * 1000                      # END TIME (INF 2) -> LATENCY MS
         
-        return cnn_pred.item(), cnn_confidence.item(), cnn_latency
+        return cnn_pred.item(), cnn_confidence.item(), cnn_latency # RETURN PRED, CONFIDENCE, LATENCY
   
     # VIT PREDICTION HELPER
     def _predict_vit(
@@ -180,51 +305,72 @@ class AdaptiveClassifier:
         image: Image.Image
     ):
         """ PREDICTION USING VIT MODEL """
-        vit_input = self.vit_processor(images = image, return_tensors = "pt")       # PREPROCESS FOR VIT
-        vit_input = {k: v.to(self.device) for k, v in vit_input.items()}            # MOVE TO CPU/GPU
+        batched = image.unsqueeze(0).to(self.device)           # BATCH DIMENSION [3, 224, 224] -> [1, 3, 224, 224]
+    
             
-            # INFERENCE
+        # INFERENCE
         start = time.perf_counter()                                                 # START TIME (INF 1)
         with torch.no_grad():
-            vit_outputs = self.vit(**vit_input)
-            vit_logits = vit_outputs.logits
-            vit_probs = F.softmax(vit_logits, dim = 1)
-            vit_confidence, vit_pred = torch.max(vit_probs, dim = 1)
-            vit_latency = (time.perf_counter() - start) * 1000                          # END TIME (INF 2) -> LATENCY MS
+            # GET CONFIDENCE
+            outputs =  self.vit(batched)    # FORWARD PASS
             
-        return vit_pred.item(), vit_confidence.item(), vit_latency
+            if hasattr(outputs, 'logits'):
+                logits = outputs.logits
+            else:
+                logits = outputs
+            
+            probs = F.softmax(logits, dim = 1) # SOFTMAX PROBABILITIES
+            vit_confidence, vit_pred = torch.max(probs, dim = 1) # MAX CONFIDENCE & PREDICTION
+            
+        vit_latency = (time.perf_counter() - start) * 1000                          # END TIME (INF 2) -> LATENCY MS
+            
+        return vit_pred.item(), vit_confidence.item(), vit_latency # RETURN PRED, CONFIDENCE, LATENCY
     
     
 
 # ENTRY (TESTING PURPOSES)
 if __name__ == "__main__":
     # TEST ADAPTIVE CLASSIFIER
-    
+        
     # LOAD TEST DATASET
-    test_dataset = datasets.CIFAR10(
-        root = './data',
-        train = False,
-        download = True,    
+    
+    test_transform = transforms.Compose([
+        transforms.Resize((CONFIG['resolution'], CONFIG['resolution'])),
+        transforms.ToTensor(),
+        transforms.Normalize( 
+            mean = (0.485, 0.456, 0.406),
+            std = (0.229, 0.224, 0.225))
+    ])
+    
+    test_dataset = TBDataset(
+        csv_file = CONFIG['test_csv'],
+        root_dir = CONFIG['data_dir'],
+        transform = test_transform, 
     )
-
 
     # CREATE ADAPTIVE CLASSIFIER
     adaptive = AdaptiveClassifier(
-        cnn_checkpoint_path = './results/checkpoints/cnn_best.pt',
-        vit_checkpoint_path = './results/checkpoints/vit_finetuned_V2',
-        threshold = 0.90,
-        device = 'cpu'
+        cnn_checkpoint_path = CONFIG['cnn_checkpoint'],
+        vit_checkpoint_path = CONFIG['vit_checkpoint'],
+        cnn_architecture = CONFIG['cnn_architecture'],
+        vit_architecture = CONFIG['vit_architecture'],
+        threshold = CONFIG['threshold'],
+        resolution = CONFIG['resolution'],
+        device = CONFIG['device'],
+        num_classes = CONFIG['num_classes'],
+        transform = test_transform,
     )
     
-    # TEST ON IMAGES
-    class_names = test_dataset.classes
-        
-    print("="*70)
+    num_samples = CONFIG['num_samples'] if CONFIG['num_samples'] is not None else len(test_dataset)
+    num_samples = min(num_samples, len(test_dataset))
+    
+    # TEST ON IMAGES        
+    print("-"*70)
     print(f"\nTESTING ADAPTIVE CLASSIFIER")
-    print("="*70)
+    print("-"*70)
 
     # Configuration
-    x = 10000  # Number of images to test (change to 5, 100, or 1000)
+    x = num_samples  # Number of images to test (change to 5, 100, or 1000) OR SELECT num_samples FOR FULL TEST SET
 
     # Tracking variables
     total_latency = 0.0
@@ -239,10 +385,15 @@ if __name__ == "__main__":
     for i in range(x):
         img, true_label = test_dataset[i]
         pred, model_used, confidence, latency, stats = adaptive.predict(img)
+
         
         # Track metrics
         total_latency += latency
+        if isinstance(true_label, torch.Tensor):
+            true_label = true_label.item()
         correct += (pred == true_label)
+
+            
         cnn_count += (stats['routed_to'] == 'CNN')
         vit_count += (stats['routed_to'] == 'ViT')
         cnn_latencies.append(stats['cnn_latency'])
