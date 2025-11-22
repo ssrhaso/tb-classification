@@ -9,7 +9,7 @@ from src.datasets.tb_dataset import TBDataset
 # Load CNN
 cnn = models.resnet18(weights=None)
 cnn.fc = nn.Linear(512, 2)
-cnn.load_state_dict(torch.load('results/checkpoints/cnn_best.pt', map_location=torch.device('cpu')))
+cnn.load_state_dict(torch.load('results/checkpoints/cnn_best_v2.pt', map_location=torch.device('cpu')))
 cnn.eval()
 
 # Load test dataset
