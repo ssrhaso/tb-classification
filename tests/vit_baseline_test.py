@@ -7,7 +7,7 @@ from src.datasets.tb_dataset import TBDataset
 
 # Load ViT
 vit = ViTForImageClassification.from_pretrained(
-    'results/checkpoints/vit_best',
+    'results/checkpoints/vit_best_v2',
     num_labels=2,
     ignore_mismatched_sizes=True
 )

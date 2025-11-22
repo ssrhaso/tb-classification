@@ -30,7 +30,7 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 	EXPERIMENT = 1  # 1, 2, 3, 4
 
 	CONFIGS = {
-		1: {'model': 'resnet18', 'resolution': 224, 'pretrained': True, 'augment': False},
+		1: {'model': 'resnet18', 'resolution': 224, 'pretrained': True, 'augment': True},
 		2: {'model': 'resnet50', 'resolution': 224, 'pretrained': False, 'augment': False},
 		3: {'model': 'resnet50', 'resolution': 128, 'pretrained': True, 'augment': True},
 		4: {'model': 'resnet18', 'resolution': 128, 'pretrained': False, 'augment': True},
@@ -48,7 +48,7 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 	print('\n1. Preparing TB dataset...')
 
 	# TRANSFORMS
-	if config['augment']:  # FOR AUGMENTATION
+	if config['augment']:  # FOR AUGMENTATION (3.2)
 		train_transform = transforms.Compose([
 			transforms.Resize((config['resolution'], config['resolution'])),
 			transforms.RandomHorizontalFlip(p=0.5),
@@ -57,15 +57,17 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 
 			# NEW: ADD COLOUR JITTER (3.1)
 			transforms.ColorJitter(
-       					brightness=0.3, 
-                        contrast=0.3,
-                        saturation=0.3,
-                        hue=0.1),
-   
+       					brightness=0.5, 
+                        contrast=0.5,
+                        saturation=0.5,
+						hue=0.2
+			),
+			transforms.RandomEqualize(p=0.3),
 			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406],
 								 std=[0.229, 0.224, 0.225]),
 		])
+  
 	else:
 		train_transform = transforms.Compose([
 			transforms.Resize((config['resolution'], config['resolution'])),

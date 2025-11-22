@@ -51,11 +51,12 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 			transforms.RandomVerticalFlip(p=0.5),
 			transforms.RandomRotation(degrees=15),
 			transforms.ColorJitter(
-       					brightness=0.3, 
-                        contrast=0.3,
-                        saturation=0.3,
-                        hue=0.1),
-   
+       					brightness=0.5, 
+                        contrast=0.5,
+                        saturation=0.5,
+						hue=0.2
+			),
+			transforms.RandomEqualize(p=0.3),
 			transforms.ToTensor(),
 			transforms.Normalize(mean=processor.image_mean, std=processor.image_std),
 		])
