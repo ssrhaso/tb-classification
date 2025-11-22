@@ -9,6 +9,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import models, transforms
+import numpy as np
+from sklearn.utils.class_weight import compute_class_weight
 
 
 # root (tb-classification), assuming train_cnn.py is in src/train/
@@ -51,19 +53,18 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 	if config['augment']:  # FOR AUGMENTATION (3.2)
 		train_transform = transforms.Compose([
 			transforms.Resize((config['resolution'], config['resolution'])),
-			transforms.RandomHorizontalFlip(p=0.5),
-			transforms.RandomVerticalFlip(p=0.5),
-			transforms.RandomRotation(degrees=15),
+			transforms.RandomHorizontalFlip(p=0.3),
+			transforms.RandomVerticalFlip(p=0.3),
+			transforms.RandomRotation(degrees=10),
 
 			# NEW: ADD COLOUR JITTER (3.1)
 			transforms.ColorJitter(
-       					brightness=0.5, 
-                        contrast=0.5,
-                        saturation=0.5,
-						hue=0.2
+       					brightness=0.2, 
+                        contrast=0.2,
+                        saturation=0.2,
+						hue=0.05
 			),
-			transforms.RandomEqualize(p=0.3),
-			transforms.ToTensor(),
+   			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406],
 								 std=[0.229, 0.224, 0.225]),
 		])
@@ -86,7 +87,7 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 	# CREATE SPLITS IF NOT EXIST
 	if not os.path.exists('splits/train_split.csv'):
 		create_data_splits(data_dir=DATA_DIR, seed=42)
-
+	
 	# DATASETS
 	trainset = TBDataset(csv_file='splits/train_split.csv', root_dir=DATA_DIR, transform=train_transform)
 	valset = TBDataset(csv_file='splits/val_split.csv', root_dir=DATA_DIR, transform=val_transform)
@@ -98,6 +99,8 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 
 	print(f' TRAINING set: {len(trainset)} images')
 	print(f' VALIDATION set: {len(valset)} images')
+ 
+ 
 
 	# 2. SETUP TRAINING
 	print('\n2. SETTING UP TRAINING...')
@@ -119,9 +122,17 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 	model = model.to(device)
 	print(f" MODEL LOADED : {config['model']} | PRETRAINED : {config['pretrained']}")
 
-	# LOSS & OPTIMIZER
-	criterion = nn.CrossEntropyLoss()
-	optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+	# CLASS BALANCING (NEW)
+	train_labels = np.array([trainset[i][1] for i in range(len(trainset))])
+	class_weights = compute_class_weight(class_weight = 'balanced', classes = np.unique(train_labels), y = train_labels)
+	class_weights = torch.tensor(class_weights, dtype=torch.float).to(device)
+	print(f' CLASS WEIGHTS : {class_weights.cpu().numpy()}')
+	print(f' CLASS 0  : NEGATIVE SAMPLES : {class_weights[0]:.4f} | CLASS 1 : POSITIVE SAMPLES : {class_weights[1]:.4f}')
+ 
+	# LOSS AND OPTIMIZER
+	criterion = nn.CrossEntropyLoss(weight=class_weights)
+	optimizer = optim.Adam(model.parameters(), lr = 0.001)
 
 	# TRAINING LOOP
 	EPOCHS = 50

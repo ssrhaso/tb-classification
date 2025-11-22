@@ -77,7 +77,7 @@ def create_data_splits(data_dir, seed=42):
         stratify=temp_df.iloc[:, 1]
     )
     
-    # Save splits
+    # SAVE SPLITS
     os.makedirs('splits', exist_ok=True)
     train_df.to_csv('splits/train_split.csv', index=False)
     val_df.to_csv('splits/val_split.csv', index=False)
