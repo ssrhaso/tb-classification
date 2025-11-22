@@ -54,7 +54,14 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 			transforms.RandomHorizontalFlip(p=0.5),
 			transforms.RandomVerticalFlip(p=0.5),
 			transforms.RandomRotation(degrees=15),
-			transforms.ColorJitter(brightness=0.2, contrast=0.2),
+
+			# NEW: ADD COLOUR JITTER (3.1)
+			transforms.ColorJitter(
+       					brightness=0.3, 
+                        contrast=0.3,
+                        saturation=0.3,
+                        hue=0.1),
+   
 			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406],
 								 std=[0.229, 0.224, 0.225]),
@@ -189,7 +196,7 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 		if val_accuracy > best_val_acc:
 			best_val_acc = val_accuracy
 			best_epoch = epoch + 1
-			torch.save(model.state_dict(), 'results/checkpoints/cnn_best.pt')
+			torch.save(model.state_dict(), 'results/checkpoints/cnn_best_v2.pt')
 			print(f'BEST MODEL SAVED (ACCURACY : {best_val_acc:.2f}%)')
 		print()
 

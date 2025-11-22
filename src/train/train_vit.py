@@ -50,7 +50,12 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 			transforms.RandomHorizontalFlip(p=0.5),
 			transforms.RandomVerticalFlip(p=0.5),
 			transforms.RandomRotation(degrees=15),
-			transforms.ColorJitter(brightness=0.2, contrast=0.2),
+			transforms.ColorJitter(
+       					brightness=0.3, 
+                        contrast=0.3,
+                        saturation=0.3,
+                        hue=0.1),
+   
 			transforms.ToTensor(),
 			transforms.Normalize(mean=processor.image_mean, std=processor.image_std),
 		])
@@ -171,7 +176,7 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 			best_val_acc = val_accuracy
 			best_epoch = epoch + 1
 			model.save_pretrained('results/checkpoints/vit_best')
-			processor.save_pretrained('results/checkpoints/vit_best')
+			processor.save_pretrained('results/checkpoints/vit_best_v2')
 			print(f'BEST MODEL SAVED (ACCURACY : {best_val_acc:.2f}%)')
 		print()
 
