@@ -2,3 +2,7 @@ data/
 results/
 datasets/tb_dataset_crops/
 splits/
+src/datasets/tb_dataset_crops/neg
+src/datasets/tb_dataset_crops/pos
+
+
