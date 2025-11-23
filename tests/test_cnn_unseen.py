@@ -8,7 +8,7 @@ import os
 # Load CNN v3
 cnn = models.resnet18(weights=None)
 cnn.fc = nn.Linear(512, 2)
-cnn.load_state_dict(torch.load('results/checkpoints/cnn_best_v3.pt', map_location='cpu'))
+cnn.load_state_dict(torch.load('results/checkpoints/cnn_best_v6.pt', map_location='cpu'))
 cnn.eval()
 
 transform = transforms.Compose([

@@ -53,16 +53,14 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 	if config['augment']:  # FOR AUGMENTATION (3.2)
 		train_transform = transforms.Compose([
 			transforms.Resize((config['resolution'], config['resolution'])),
-			transforms.RandomHorizontalFlip(p=0.3),
-			transforms.RandomVerticalFlip(p=0.3),
-			transforms.RandomRotation(degrees=10),
+			transforms.RandomHorizontalFlip(p=0.5),
+			transforms.RandomVerticalFlip(p=0.5),
+			transforms.RandomRotation(degrees=15),
 
 			# NEW: ADD COLOUR JITTER (3.1)
 			transforms.ColorJitter(
        					brightness=0.2, 
                         contrast=0.2,
-                        saturation=0.2,
-						hue=0.05
 			),
    			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406],
@@ -72,6 +70,12 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 	else:
 		train_transform = transforms.Compose([
 			transforms.Resize((config['resolution'], config['resolution'])),
+   
+			# NEW: ADD COLOUR JITTER (3.1)
+			transforms.ColorJitter(
+						brightness=0.2,
+						contrast=0.2,
+			),
 			transforms.ToTensor(),
 			transforms.Normalize(mean=[0.485, 0.456, 0.406],
 								 std=[0.229, 0.224, 0.225]),

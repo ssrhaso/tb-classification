@@ -51,18 +51,20 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 			transforms.RandomVerticalFlip(p=0.5),
 			transforms.RandomRotation(degrees=15),
 			transforms.ColorJitter(
-       					brightness=0.5, 
-                        contrast=0.5,
-                        saturation=0.5,
-						hue=0.2
+       					brightness=0.2, 
+                        contrast=0.2,
 			),
-			transforms.RandomEqualize(p=0.3),
 			transforms.ToTensor(),
 			transforms.Normalize(mean=processor.image_mean, std=processor.image_std),
 		])
 	else:
 		train_transform = transforms.Compose([
 			transforms.Resize((config['resolution'], config['resolution'])),
+			transforms.ColorJitter(
+       					brightness=0.2, 
+                        contrast=0.2,
+			),
+
 			transforms.ToTensor(),
 			transforms.Normalize(mean=processor.image_mean, std=processor.image_std),
 		])
