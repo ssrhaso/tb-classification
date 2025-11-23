@@ -6,7 +6,7 @@ from PIL import Image
 import os
 
 # Load ViT v3
-vit = ViTForImageClassification.from_pretrained('results/checkpoints/vit_best_v3', num_labels=2)
+vit = ViTForImageClassification.from_pretrained('results/checkpoints/vit_best_augmentation', num_labels=2)
 vit.eval()
 
 transform = transforms.Compose([
@@ -18,7 +18,7 @@ transform = transforms.Compose([
 # Test unseen images
 unseen_dir = 'src/datasets/unseen_images'
 print("="*60)
-print("ViT v3 - UNSEEN IMAGES TEST")
+print("ViT AUGMENTATION - UNSEEN IMAGES TEST")
 print("="*60)
 
 correct = 0
@@ -44,5 +44,5 @@ for img_file in sorted(os.listdir(unseen_dir)):
         print(f"{status} {img_file}: Pred={pred}, True={true_label}, Conf={conf:.2f}")
 
 print("="*60)
-print(f"ViT v3 Accuracy: {correct}/{total} = {100*correct/total:.2f}%")
+print(f"ViT v4 Accuracy: {correct}/{total} = {100*correct/total:.2f}%")
 print("="*60)

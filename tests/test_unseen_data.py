@@ -101,7 +101,7 @@ if __name__ == '__main__':
     # SUMMARY
     total_images = len(image_files)
     print("\n" + "-" * 60)
-    print("TESTING COMPLETE")
+    print("TESTING COMPLETE (AUGMENTATION)")
     print("-" * 60)
     print(f"CNN ACCURACY: {cnn_correct}/{total_images} = "
           f"{100 * cnn_correct / total_images:.2f}%")

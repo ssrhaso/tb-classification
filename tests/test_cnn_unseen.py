@@ -8,7 +8,7 @@ import os
 # Load CNN v3
 cnn = models.resnet18(weights=None)
 cnn.fc = nn.Linear(512, 2)
-cnn.load_state_dict(torch.load('results/checkpoints/cnn_best_v6.pt', map_location='cpu'))
+cnn.load_state_dict(torch.load('results/checkpoints/cnn_best_augmentation.pt', map_location='cpu'))
 cnn.eval()
 
 transform = transforms.Compose([
@@ -20,7 +20,7 @@ transform = transforms.Compose([
 # Test unseen images
 unseen_dir = 'src/datasets/unseen_images'
 print("="*60)
-print("CNN v3 - UNSEEN IMAGES TEST")
+print("CNN AUGMENTATION - UNSEEN IMAGES TEST")
 print("="*60)
 
 correct = 0
@@ -45,5 +45,5 @@ for img_file in sorted(os.listdir(unseen_dir)):
         print(f"{status} {img_file}: Pred={pred}, True={true_label}, Conf={conf:.2f}")
 
 print("="*60)
-print(f"CNN v3 Accuracy: {correct}/{total} = {100*correct/total:.2f}%")
+print(f"CNN v4 Accuracy: {correct}/{total} = {100*correct/total:.2f}%")
 print("="*60)
