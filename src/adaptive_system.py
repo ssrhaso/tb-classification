@@ -16,8 +16,8 @@ from datasets.tb_dataset import TBDataset
 
 # CONFIGURATION
 CONFIG = {
-    'cnn_checkpoint': './results/checkpoints/cnn_best_augmentation.pt',
-    'vit_checkpoint': './results/checkpoints/vit_best_augmentation',
+    'cnn_checkpoint': './results/checkpoints/cnn_models/cnn_224_False_best.pt',
+    'vit_checkpoint': './results/checkpoints/vit_models/vit_224_True_best',
     'cnn_architecture': 'resnet18', # options: 'resnet18', 'resnet50'
     'vit_architecture': 'vit_b_16', 
     'threshold': 0.90,  # CONFIDENCE THRESHOLD FOR ROUTING

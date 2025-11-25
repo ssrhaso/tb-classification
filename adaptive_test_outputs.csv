@@ -1,0 +1,7 @@
+image,true_label,cnn_pred,cnn_conf,vit_pred,vit_conf,adaptive_pred,adaptive_conf,routed_to,latency_ms,cnn_correct,vit_correct,adaptive_correct
+neg_1.png,0,0,0.99,1,0.78,0,0.99,CNN,26.600,1,0,1
+neg_2.png,0,0,1.00,0,0.97,0,1.00,CNN,20.818,1,1,1
+neg_3.png,0,0,1.00,0,0.97,0,1.00,CNN,24.357,1,1,1
+pos_1.png,1,1,1.00,1,0.99,1,1.00,CNN,22.471,1,1,1
+pos_2.png,1,1,0.59,1,0.98,1,0.98,ViT,134.839,1,1,1
+pos_3.png,1,0,0.51,1,0.98,1,0.98,ViT,145.054,0,1,1

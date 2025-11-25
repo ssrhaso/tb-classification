@@ -1,0 +1,15 @@
+model,image,pred,true,confidence,correct
+vit_224_False_best,neg_1.png,0,0,0.91,1
+vit_224_False_best,neg_2.png,0,0,0.98,1
+vit_224_False_best,neg_3.png,0,0,1.00,1
+vit_224_False_best,pos_1.png,0,1,0.64,0
+vit_224_False_best,pos_2.png,1,1,0.53,1
+vit_224_False_best,pos_3.png,0,1,0.65,0
+,,,,,
+vit_224_True_best,neg_1.png,1,0,0.78,0
+vit_224_True_best,neg_2.png,0,0,0.97,1
+vit_224_True_best,neg_3.png,0,0,0.97,1
+vit_224_True_best,pos_1.png,1,1,0.99,1
+vit_224_True_best,pos_2.png,1,1,0.98,1
+vit_224_True_best,pos_3.png,1,1,0.98,1
+,,,,,
