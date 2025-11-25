@@ -23,10 +23,17 @@ from src.datasets.tb_dataset import TBDataset, create_data_splits
 
 if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 
-	EXPERIMENT = 1
+	EXPERIMENT = 1 # 1, 2, 3, 4, 5, 6, 7, 8
 
 	CONFIGS = {
 		1: {'model': 'vit-base', 'resolution': 224, 'pretrained': True, 'augment': True},
+		2: {'model': 'vit-base', 'resolution': 224, 'pretrained': True, 'augment': False},
+		3: {'model': 'vit-base', 'resolution': 128, 'pretrained': True, 'augment': True},
+		4: {'model': 'vit-base', 'resolution': 128, 'pretrained': True, 'augment': False},
+  		5: {'model': 'vit-base', 'resolution': 64, 'pretrained': True, 'augment': True},
+    	6: {'model': 'vit-base', 'resolution': 64, 'pretrained': True, 'augment': False},
+		7: {'model': 'vit-base', 'resolution': 32, 'pretrained': True, 'augment': True},
+		8: {'model': 'vit-base', 'resolution': 32, 'pretrained': True, 'augment': False},
 	}
 	config = CONFIGS[EXPERIMENT]
 
@@ -178,8 +185,8 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 		if val_accuracy > best_val_acc:
 			best_val_acc = val_accuracy
 			best_epoch = epoch + 1
-			model.save_pretrained('results/checkpoints/vit_best')
-			processor.save_pretrained('results/checkpoints/vit_best_v2')
+			model.save_pretrained(f'results/checkpoints/vit_{config["resolution"]}_{config["augment"]}_best')
+			processor.save_pretrained(f'results/checkpoints/vit_{config["resolution"]}_{config["augment"]}_best')
 			print(f'BEST MODEL SAVED (ACCURACY : {best_val_acc:.2f}%)')
 		print()
 

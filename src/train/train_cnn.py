@@ -29,14 +29,19 @@ from src.datasets.tb_dataset import TBDataset, create_data_splits
 
 if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 	# CONFIGURATION
-	EXPERIMENT = 1  # 1, 2, 3, 4
+	EXPERIMENT = 1  	# 1, 2, 3, 4, 5, 6, 7, 8
 
 	CONFIGS = {
 		1: {'model': 'resnet18', 'resolution': 224, 'pretrained': True, 'augment': True},
-		2: {'model': 'resnet50', 'resolution': 224, 'pretrained': False, 'augment': False},
-		3: {'model': 'resnet50', 'resolution': 128, 'pretrained': True, 'augment': True},
-		4: {'model': 'resnet18', 'resolution': 128, 'pretrained': False, 'augment': True},
+		2: {'model': 'resnet18', 'resolution': 224, 'pretrained': True, 'augment': False},
+		3: {'model': 'resnet18', 'resolution': 128, 'pretrained': True, 'augment': True},
+		4: {'model': 'resnet18', 'resolution': 128, 'pretrained': True, 'augment': False},
+  		5: {'model': 'resnet18', 'resolution': 64, 'pretrained': True, 'augment': True},
+    	6: {'model': 'resnet18', 'resolution': 64, 'pretrained': True, 'augment': False},
+		7: {'model': 'resnet18', 'resolution': 32, 'pretrained': True, 'augment': True},
+		8: {'model': 'resnet18', 'resolution': 32, 'pretrained': True, 'augment': False},
 	}
+ 
 	config = CONFIGS[EXPERIMENT]
 
 	print('-' * 60)
@@ -213,7 +218,7 @@ if __name__ == '__main__':  # PREVENT THREADING ISSUES ON WINDOWS
 		if val_accuracy > best_val_acc:
 			best_val_acc = val_accuracy
 			best_epoch = epoch + 1
-			torch.save(model.state_dict(), 'results/checkpoints/cnn_best_v2.pt')
+			torch.save(model.state_dict(), f'results/checkpoints/cnn_{config["resolution"]}_{config["augment"]}_best.pt')
 			print(f'BEST MODEL SAVED (ACCURACY : {best_val_acc:.2f}%)')
 		print()
 
